@@ -1,0 +1,5 @@
+streamlit==1.25.0
+SpeechRecognition==3.10.0
+pyttsx3==2.90
+gspread==5.8.0
+oauth2client==4.1.3
