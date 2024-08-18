@@ -1,19 +1,20 @@
 import streamlit as st
-from pydub import AudioSegment
+import speech_recognition as sr
+import pyttsx3
+import re
 import tempfile
 import os
-import re
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import speech_recognition as sr
 
-# Function to record audio using ffmpeg
-def record_audio(duration):
-    st.write("Recording for {} seconds...".format(duration))
-    temp_audio_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
-    os.system(f"ffmpeg -y -f alsa -t {duration} -i default {temp_audio_file.name}")
-    st.write("Recording complete.")
-    return temp_audio_file.name
+# Initialize the recognizer 
+r = sr.Recognizer()
+
+# Function to convert text to speech
+def SpeakText(command):
+    engine = pyttsx3.init()
+    engine.say(command)
+    engine.runAndWait()
 
 # Function to parse the recognized text
 def parse_text(text):
@@ -36,79 +37,85 @@ def parse_text(text):
 # Authenticate and access Google Sheets
 def access_google_sheet(sheet_name="SteelSheetDefects"):
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name(os.path.join(os.getcwd(), "voice-based-defect-logging-6b6a427015be.json"), scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_name(r"C:\Users\archa\Downloads\voice-based-defect-logging-6b6a427015be.json", scope)
     client = gspread.authorize(creds)
     sheet = client.open("defects").sheet1
     return sheet
-    
+
 # Function to append defect info to Google Sheets
 def append_to_google_sheet(coil_id, start_length, stop_length, defect, severity, position):
     sheet = access_google_sheet()
     sheet.append_row([coil_id, start_length, stop_length, defect, severity, position])
 
 # Initialize Streamlit session state to store transcribed data
-for key in ['coil_id', 'start_length', 'stop_length', 'defect', 'severity', 'position']:
-    if key not in st.session_state:
-        st.session_state[key] = ""
+if 'coil_id' not in st.session_state:
+    st.session_state['coil_id'] = ""
+if 'start_length' not in st.session_state:
+    st.session_state['start_length'] = ""
+if 'stop_length' not in st.session_state:
+    st.session_state['stop_length'] = ""
+if 'defect' not in st.session_state:
+    st.session_state['defect'] = ""
+if 'severity' not in st.session_state:
+    st.session_state['severity'] = ""
+if 'position' not in st.session_state:
+    st.session_state['position'] = ""
 
-# Streamlit app layout
+# Streamlit app
 st.title("Steel Sheet Defect Registration")
+st.write("Click the button below to record your voice for defect registration. Please include details like Coil ID, start length, stop length, defect, severity, and position in your speech.")
 
-# Two columns for layout
-col1, col2 = st.columns(2)
-
-with col1:
-    st.write("Click the button below to record your voice for defect registration. Please include details like Coil ID, start length, stop length, defect, severity, and position in your speech.")
-
-    if st.button("Record for 20 seconds"):
-        # Record audio using the custom function
-        audio_path = record_audio(20)
+# Check if the button is clicked
+if st.button("Record for 20 seconds"):
+    with sr.Microphone() as source:
+        st.write("Adjusting for ambient noise, please wait...")
+        r.adjust_for_ambient_noise(source, duration=0.2)
+        
+        st.write("Recording for 20 seconds...")
+        audio = r.listen(source, timeout=20, phrase_time_limit=20)
         st.write("Recording complete. Recognizing...")
-
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio_file:
+            temp_audio_file.write(audio.get_wav_data())
+            temp_audio_path = temp_audio_file.name
+        
         try:
-            # Load the recorded audio
-            audio = AudioSegment.from_wav(audio_path)
-            recognizer = sr.Recognizer()
+            MyText = r.recognize_google(audio).lower()
+            st.write("You said:", MyText)
+            #SpeakText(MyText)
 
-            with sr.AudioFile(audio_path) as source:
-                audio_data = recognizer.record(source)
-                MyText = recognizer.recognize_google(audio_data).lower()
-                st.write("You said:", MyText)
+            coil_id, start_length, stop_length, defect, severity, position = parse_text(MyText)
 
-                coil_id, start_length, stop_length, defect, severity, position = parse_text(MyText)
-
-                # Store the extracted values in session state
-                st.session_state['coil_id'] = coil_id if coil_id else ""
-                st.session_state['start_length'] = start_length if start_length else ""
-                st.session_state['stop_length'] = stop_length if stop_length else ""
-                st.session_state['defect'] = defect if defect else ""
-                st.session_state['severity'] = severity if severity else ""
-                st.session_state['position'] = position if position else ""
+            # Store the extracted values in session state
+            st.session_state['coil_id'] = coil_id if coil_id else ""
+            st.session_state['start_length'] = start_length if start_length else ""
+            st.session_state['stop_length'] = stop_length if stop_length else ""
+            st.session_state['defect'] = defect if defect else ""
+            st.session_state['severity'] = severity if severity else ""
+            st.session_state['position'] = position if position else ""
 
         except sr.RequestError as e:
             st.write(f"Could not request results; {e}")
         except sr.UnknownValueError:
             st.write("Could not understand audio")
-        except Exception as e:
-            st.write(f"An error occurred: {e}")
-        finally:
-            # Remove temporary audio file
-            if os.path.exists(audio_path):
-                os.remove(audio_path)
 
-with col2:
-    coil_id = st.text_input("Coil ID", value=st.session_state['coil_id'])
-    start_length = st.text_input("Start Length", value=st.session_state['start_length'])
-    stop_length = st.text_input("Stop Length", value=st.session_state['stop_length'])
-    defect = st.text_input("Defect", value=st.session_state['defect'])
-    severity = st.text_input("Severity", value=st.session_state['severity'])
-    position = st.text_input("Position", value=st.session_state['position'])
+        if os.path.exists(temp_audio_path):
+            os.remove(temp_audio_path)
 
-    if st.button("Save to Google Sheets"):
-        if coil_id and start_length and stop_length and defect and severity and position:
-            st.write("Status: Successful")
-            append_to_google_sheet(coil_id, start_length, stop_length, defect, severity, position)
-        else:
-            st.write("Status: Unsuccessful. Please ensure all fields are filled.")
+# Editable fields for manual correction, using session state to preserve data
+coil_id = st.text_input("Coil ID", value=st.session_state['coil_id'])
+start_length = st.text_input("Start Length", value=st.session_state['start_length'])
+stop_length = st.text_input("Stop Length", value=st.session_state['stop_length'])
+defect = st.text_input("Defect", value=st.session_state['defect'])
+severity = st.text_input("Severity", value=st.session_state['severity'])
+position = st.text_input("Position", value=st.session_state['position'])
 
+if st.button("Save to Google Sheets"):
+    if coil_id and start_length and stop_length and defect and severity and position:
+        st.write("Status: Successful")
+        append_to_google_sheet(coil_id, start_length, stop_length, defect, severity, position)
+    else:
+        st.write("Status: Unsuccessful. Please ensure all fields are filled.")
+
+# More debugging information
 st.write("Streamlit script ended")
