@@ -1,6 +1,8 @@
-streamlit==1.25.0
-SpeechRecognition==3.10.0
-pyttsx3==2.90
-gspread==5.8.0
-oauth2client==4.1.3
-pyaudio==0.2.13
+streamlit
+sounddevice
+numpy
+scipy
+speechrecognition
+gspread
+oauth2client
+pyttsx3
