@@ -44,11 +44,11 @@ def parse_text(text):
 # Authenticate and access Google Sheets
 def access_google_sheet(sheet_name="SteelSheetDefects"):
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name(r"C:\Users\archa\Downloads\voice-based-defect-logging-6b6a427015be.json", scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_name("voice-based-defect-logging-6b6a427015be.json", scope)
     client = gspread.authorize(creds)
     sheet = client.open("defects").sheet1
     return sheet
-
+    
 # Function to append defect info to Google Sheets
 def append_to_google_sheet(coil_id, start_length, stop_length, defect, severity, position):
     sheet = access_google_sheet()
