@@ -1,13 +1,5 @@
 import streamlit as st
 from pydub import AudioSegment
-from pydub.playback import play
-import tempfile
-import os
-import re
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-import streamlit as st
-from pydub import AudioSegment
 import tempfile
 import os
 import re
@@ -44,7 +36,7 @@ def parse_text(text):
 # Authenticate and access Google Sheets
 def access_google_sheet(sheet_name="SteelSheetDefects"):
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name("voice-based-defect-logging-6b6a427015be.json", scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_name(os.path.join(os.getcwd(), "voice-based-defect-logging-6b6a427015be.json"), scope)
     client = gspread.authorize(creds)
     sheet = client.open("defects").sheet1
     return sheet
@@ -55,18 +47,9 @@ def append_to_google_sheet(coil_id, start_length, stop_length, defect, severity,
     sheet.append_row([coil_id, start_length, stop_length, defect, severity, position])
 
 # Initialize Streamlit session state to store transcribed data
-if 'coil_id' not in st.session_state:
-    st.session_state['coil_id'] = ""
-if 'start_length' not in st.session_state:
-    st.session_state['start_length'] = ""
-if 'stop_length' not in st.session_state:
-    st.session_state['stop_length'] = ""
-if 'defect' not in st.session_state:
-    st.session_state['defect'] = ""
-if 'severity' not in st.session_state:
-    st.session_state['severity'] = ""
-if 'position' not in st.session_state:
-    st.session_state['position'] = ""
+for key in ['coil_id', 'start_length', 'stop_length', 'defect', 'severity', 'position']:
+    if key not in st.session_state:
+        st.session_state[key] = ""
 
 # Streamlit app layout
 st.title("Steel Sheet Defect Registration")
@@ -106,10 +89,12 @@ with col1:
             st.write(f"Could not request results; {e}")
         except sr.UnknownValueError:
             st.write("Could not understand audio")
-
-        # Remove temporary audio file
-        if os.path.exists(audio_path):
-            os.remove(audio_path)
+        except Exception as e:
+            st.write(f"An error occurred: {e}")
+        finally:
+            # Remove temporary audio file
+            if os.path.exists(audio_path):
+                os.remove(audio_path)
 
 with col2:
     coil_id = st.text_input("Coil ID", value=st.session_state['coil_id'])
@@ -125,4 +110,5 @@ with col2:
             append_to_google_sheet(coil_id, start_length, stop_length, defect, severity, position)
         else:
             st.write("Status: Unsuccessful. Please ensure all fields are filled.")
+
 st.write("Streamlit script ended")
