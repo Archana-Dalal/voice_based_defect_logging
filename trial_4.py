@@ -5,8 +5,8 @@ import re
 import tempfile
 import os
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 import json
+from oauth2client.service_account import ServiceAccountCredentials
 
 # Initialize the recognizer 
 r = sr.Recognizer()
@@ -35,18 +35,26 @@ def parse_text(text):
         position.group(1) if position else None
     )
 
-# Function to access Google Sheets using credentials from the repository
-def access_google_sheet(sheet_name="SteelSheetDefects"):
-    # Load credentials from the uploaded file in Streamlit or directly from the repository
-    creds = None
+# Authenticate and access Google Sheets
+def access_google_sheet(sheet_name="defects"):
+    # Define the scope for the Google Sheets API
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
+    # Load the credentials JSON file from the repository
+    creds_json = None
     if 'json_credentials' not in st.session_state:
         with open('voice-based-defect-logging-6b6a427015be.json') as f:
             creds_json = json.load(f)
             st.session_state['json_credentials'] = creds_json
-    
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(st.session_state['json_credentials'], scope=["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"])
+    else:
+        creds_json = st.session_state['json_credentials']
+
+    # Authenticate using the credentials
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_json, scope)
     client = gspread.authorize(creds)
-    sheet = client.open("defects").sheet1
+
+    # Open the Google Sheet named "defects"
+    sheet = client.open(sheet_name).sheet1  # Here, sheet_name is passed correctly as a string
     return sheet
 
 # Function to append defect info to Google Sheets
@@ -126,5 +134,4 @@ with col2:
             append_to_google_sheet(coil_id, start_length, stop_length, defect, severity, position)
         else:
             st.write("Status: Unsuccessful. Please ensure all fields are filled.")
-
 st.write("Streamlit script ended")
