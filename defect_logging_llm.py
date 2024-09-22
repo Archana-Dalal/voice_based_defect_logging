@@ -21,7 +21,7 @@ def SpeakText(command):
 #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
 # Function to extract data using the LLM
 def extract_data_with_llm(transcribed_text):
-    client = Groq(api_key='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')  # Replace 'api_key' with your actual API key
+    client = Groq(api_key='your api')  # Replace 'api_key' with your actual API key
 
     chat_completion = client.chat.completions.create(
         messages=[
@@ -39,7 +39,7 @@ def extract_data_with_llm(transcribed_text):
 
 def access_google_sheet(sheet_name="SteelSheetDefects"):
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name(r"C:\Users\archa\Downloads\voice-based-defect-logging-d7df3ea44705.json", scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_name(r"json file", scope)
     client = gspread.authorize(creds)
     sheet = client.open("defects").sheet1
     return sheet
