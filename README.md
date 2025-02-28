@@ -16,7 +16,7 @@ Authentication: OAuth2 (Google API)
 Backend: Python
 
 Impact & Uniqueness:
-Time Efficiency: Manual defect logging takes 1-2 minutes per entry, while this system completes it in under 15 seconds, boosting productivity by over 150**%** and more, depending on the operator's expertise.
+Time Efficiency: Manual defect logging takes 1-2 minutes per entry, while this system completes it in under 15 seconds, boosting productivity by over 150% and more, depending on the operator's expertise.
 Enhanced Accuracy: AI-driven extraction minimizes human error, ensuring precise defect tracking.
 Real-Time Analysis: Enables instant defect detection and storage, improving manufacturing workflows.
 Scalability: Can be integrated with larger quality control systems for enhanced monitoring.
